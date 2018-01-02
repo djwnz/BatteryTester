@@ -10,9 +10,9 @@
 #FITNESS FOR A PARTICULAR PURPOSE.
 ###########################################################################
 """
-@package PowerSupply.py
-Module to handle the control of a generic power supply, providing an \
-abstraction layer for the user.
+@package Equipment_Control.py
+Module to provide a gui interface to control the Equipment involved in the
+Battery Tester Module.
 """
 
 __author__ = 'David Wright (david@asteriaec.com)'
@@ -23,11 +23,10 @@ __version__ = '0.1.0' #Versioning: http://www.python.org/dev/peps/pep-0386/
 # -------
 # Imports
 
-from koradserial import KoradSerial
-import sys
-import serial
+import Tkinter as TK
+import Power_Supply as PS
 
-# ---------
-# Classes
+# construct the root frame
+root = TK.Tk()
+self.root.geometry('800x600')
 
-class PowerSupply(object):
