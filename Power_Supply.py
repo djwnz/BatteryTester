@@ -28,6 +28,9 @@ import Tkinter as TK
 import sys
 import serial
 
+default_port = 'COM2'
+
+
 # ---------
 # Classes
 
@@ -66,6 +69,7 @@ class PowerSupply(object):
         # end if        
     #end def
     
+    
     def __enter__(self):
         """
         Enter a specific usage of the PowerSupply Object. this is called by the
@@ -102,6 +106,7 @@ class PowerSupply(object):
         return self
     # end def
     
+    
     def output_on(self):
         """ 
         Turn on the output of the power supply
@@ -111,6 +116,7 @@ class PowerSupply(object):
         # end if 
     # end def
     
+    
     def output_off(self):
         """ 
         Turn off the output of the power supply
@@ -119,6 +125,7 @@ class PowerSupply(object):
             self.PS.output.off()
         # end if 
     # end def    
+    
     
     def get_output(self):
         """ 
@@ -130,6 +137,7 @@ class PowerSupply(object):
             return self.PS.status.output.name
         # end if
     # end def
+    
     
     def get_mode(self):
         """ 
@@ -143,6 +151,7 @@ class PowerSupply(object):
         #endif
     # end def    
     
+    
     def get_output_voltage(self):
         """ 
         Get the output voltage of the power supply.
@@ -153,6 +162,7 @@ class PowerSupply(object):
             return self.output.output_voltage
         # end if 
     # end def 
+    
     
     def get_voltage(self):
         """ 
@@ -165,6 +175,7 @@ class PowerSupply(object):
         # end if 
     # end def    
     
+    
     def set_voltage(self, volts):
         """ 
         Set the output voltage setting of the power supply.
@@ -175,6 +186,7 @@ class PowerSupply(object):
             self.output.voltage = volts
         # end if 
     # end def      
+        
         
     def get_output_current(self):
         """ 
@@ -187,6 +199,7 @@ class PowerSupply(object):
         # end if 
     # end def 
     
+    
     def get_current(self):
         """ 
         Get the output current setting of the power supply.
@@ -198,6 +211,7 @@ class PowerSupply(object):
         # end if 
     # end def    
     
+    
     def set_current(self, amps):
         """ 
         Set the output current setting of the power supply.
@@ -208,6 +222,7 @@ class PowerSupply(object):
             self.output.current = amps
         # end if 
     # end def 
+    
     
     def __exit__(self, type, value, traceback):
         """
@@ -222,6 +237,7 @@ class PowerSupply(object):
         # end if        
     #end def    
 # end class
+
 
 class Power_Supply_GUI:
     """
@@ -253,7 +269,7 @@ class Power_Supply_GUI:
     
     def __init__(self, gui_frame, gui, model):
         """
-        Initialise the PowerSupply Object
+        Initialise the PowerSupply GUI Object
         
         @param[in] gui_frame  The frame where all GUI items should be put 
                               (TK Frame)
@@ -275,27 +291,35 @@ class Power_Supply_GUI:
         self.load_gui()
     # end def
 
+
     def load_gui(self):
         """
         Add all the GUI elements to the GUI
         """
         
+        # add a border to the frame
+        self.frame.config(borderwidth = 2, relief = 'raised')        
+        
         # title
-        title = TK.Label(self.frame, text = self.model + " Power Supply")
+        title = TK.Label(self.frame, text = self.model + " Power Supply",
+                         font = "Arial 14 bold")
         title.grid(row = 0, column = 0, columnspan = 4)
         
         # output control button
         self.on_button = TK.Button(self.frame, text = 'Output On', 
                                    state='disabled', command = self.PS_On, 
-                                   activebackground = 'green', width = 15)
+                                   activebackground = 'green', width = 15,
+                                   font = "Arial 10 bold")
         self.on_button.grid(row = 1, column = 0, columnspan = 4)
         
         # title for the settings column
-        setpoint = TK.Label(self.frame, text = "Setting:")
+        setpoint = TK.Label(self.frame, text = "Setting:",
+                            font = "Arial 10 underline")
         setpoint.grid(row = 2, column = 1)
         
         # title for the vlaues column
-        value = TK.Label(self.frame, text = "Current\nValue:")
+        value = TK.Label(self.frame, text = "Current\nValue:",
+                         font = "Arial 10 underline")
         value.grid(row = 2, column = 2)
         
         # title for the voltage row
@@ -325,23 +349,25 @@ class Power_Supply_GUI:
         self.current_value.grid(row = 4, column = 2)        
         
         # label to denote constant voltage mode
-        self.CV_label = TK.Label(self.frame, text = 'CV')
+        self.CV_label = TK.Label(self.frame, text = 'C.V.')
         self.CV_label.grid(row = 3, column = 3)
         
         # label to denote constant current mode
-        self.CC_label = TK.Label(self.frame, text = 'CC', state = 'disabled')
+        self.CC_label = TK.Label(self.frame, text = 'C.C.', background = 'green')
         self.CC_label.grid(row = 4, column = 3)        
         
         # button to send the settings to the power supply
         self.set_button = TK.Button(self.frame, text = 'Set', 
                                     state='disabled', command = self.set_PS,
-                                    activebackground = 'green', width = 15)
+                                    activebackground = 'green', width = 15,
+                                    font = "Arial 10 bold")
         self.set_button.grid(row = 5, column=0, columnspan = 4, 
                               padx=10, pady=10)
         
         # update the gui from the power supply
         self.update_gui()     
     #end def
+    
     
     def PS_On(self):
         """ 
@@ -366,6 +392,7 @@ class Power_Supply_GUI:
         # end try 
     # end def
     
+    
     def PS_Off(self):
         """ 
         Turn off the power supply output when commanded by the GUI button
@@ -388,6 +415,7 @@ class Power_Supply_GUI:
             self.disable_gui()
         # end try         
     # end def    
+    
     
     def set_PS(self):
         """ 
@@ -426,6 +454,7 @@ class Power_Supply_GUI:
         #end try
     # end def   
     
+    
     def disable_gui(self):
         """
         Disable the GUI elements
@@ -437,6 +466,7 @@ class Power_Supply_GUI:
         self.current_setting.config(state='disabled')      
     # end def
     
+    
     def enable_gui(self):
         """
         Enable the GUI elements
@@ -447,6 +477,7 @@ class Power_Supply_GUI:
         self.voltage_setting.config(state='normal')
         self.current_setting.config(state='normal')      
     # end def    
+    
     
     def update_gui(self):
         """
@@ -465,6 +496,12 @@ class Power_Supply_GUI:
                 if not self.enabled:
                     # if the gui is not enabled then enable it
                     self.enable_gui()
+                    
+                    self.voltage_setting.delete(0,'end')
+                    self.voltage_setting.insert(0,str(self.PS.get_voltage()))
+                    self.current_setting.delete(0,'end')
+                    self.current_setting.insert(0,str(self.PS.get_current()))
+                    
                     self.enabled = True
                 #end if
                     
@@ -490,7 +527,7 @@ class Power_Supply_GUI:
                         # the GUI is erroniously displaying an off state so 
                         # change to on                        
                         self.on_button.config(text = "Output Off", 
-                                                          command = self.PS_Off)
+                                              command = self.PS_Off)
                         self.output_state = 'on'
                     # end if
                 # end if
@@ -498,13 +535,13 @@ class Power_Supply_GUI:
                 # determine whether the power supply is running in CV or CC mode
                 if self.PS.get_mode() == 'constant_voltage':
                     # it is in CV mode do display that
-                    self.CV_label.config(state = 'normal')
-                    self.CC_label.config(state = 'disabled')
+                    self.CV_label.config(background = 'green')
+                    self.CC_label.config(background = self.frame.cget('bg'))
                     
                 else:
                     # it is in CC mode do display that
-                    self.CV_label.config(state = 'disabled')
-                    self.CC_label.config(state = 'normal')
+                    self.CV_label.config(background = self.frame.cget('bg'))
+                    self.CC_label.config(background = 'green')
                 # end if
             #end with
             
@@ -516,6 +553,13 @@ class Power_Supply_GUI:
         # schedule the next repetition of this function
         self.gui.after(1000, self.update_gui)
     #end def
+    
+    def close_GUI(self):
+        """
+        Function to reset controls on the power supply when the gui exits.
+        """
+        self.PS.__exit__(None, None, None)
+    # end def    
 # end class
               
             
@@ -582,7 +626,7 @@ def findKoradPort():
     power_supply_port = 'NULL'
     
     # find all available ports
-    available_ports = serial_ports()
+    available_ports = [default_port] + serial_ports()
     
     # iterate through the available ports to see if any is the power supply
     for port in available_ports:
@@ -599,6 +643,7 @@ def findKoradPort():
                     power_supply_port = port
                     break;
                 # end if
+            # end with
         except:
             # this port is not a Korad power supply
             pass

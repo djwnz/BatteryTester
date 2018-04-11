@@ -25,6 +25,7 @@ __version__ = '0.3.1' #Versioning: http://www.python.org/dev/peps/pep-0386/
 import aardvark_py
 from array import array
 from struct import unpack
+import Tkinter as TK
 
 
 # ---------
@@ -55,19 +56,20 @@ class BM2:
         """
         Initialise the BM2 object to its default values
         """
-        self.message = ''
+        self.port = None
         
-        self.port = configure_aardvark()
-        
-        if (self.port == None):
-            self.message = "No Aardvark found"
-        #end if
     #end def
 
     def __enter__(self):
         """
         For use with the 'with' operator
         """   
+        self.port = configure_aardvark()
+        
+        if (self.port == None):
+            assert IOError("No Aardvark was found")
+        #end if
+        
         return self
     # end def
     
@@ -80,6 +82,8 @@ class BM2:
         if self.port != None:
             aardvark_py.aa_close(self.port)
         #end if
+        
+        self.port = None
     #end def
     
     def get_Voltage(self):
@@ -91,11 +95,11 @@ class BM2:
     #end def    
     
     def get_ChargingVoltage(self):
-        return send_SMB_command('0x14', self.port, 'uint')
+        return send_SMB_command('0x15', self.port, 'uint')
     #end def
     
     def get_ChargingCurrent(self):
-        return send_SMB_command('0x15', self.port, 'uint')
+        return send_SMB_command('0x14', self.port, 'uint')
     #end def
     
     def get_OperationStatus(self):
@@ -130,6 +134,216 @@ class BM2:
         return "0x%0.2X" % flash_page[12]
     #end def     
     
+    def get_FC(self):
+        return (send_SMB_command('0x16', self.port, 'uint') & int('0020',16)) != 0
+    # end def
+# end class
+
+class BM2_GUI:
+    """
+    Class to operate the GUI for the Load and the Load itself.
+    
+    @attribute frame           (TK Frame)     The frame which contains the GUI 
+                                              objects for this class.
+    @attribute model           (string)       The model of the Load in use.
+    @attribute gui             (TK tk)        the root GUI object.
+    @attribute Load            (DC_Load)      The DC Load object in use.
+    @attribute output_state    (string)       The current input state of the 
+                                              Load : 'on' or 'off'.
+    @attribute enabled         (bool)         Whether or not the gui is enabled
+    @attribute mode            (TK Stringvar) The mode of the DC load.
+    @attribute cc_button       (RadioButton)  Selector for constant current mode.
+    @attribute cv_button       (RadioButton)  Selector for constant voltage mode.
+    @attribute cp_button       (RadioButton)  Selector for constant power mode.
+    @attribute cr_button       (RadioButton)  Selector for constant resistance mode.
+    @attribute setting         (TK Entry)     Box where Load settings are entered.
+    @attribute units           (TK Label)     Units label for the settings box.
+    @attribute set_button      (TK Button)    Button that sends the new settings 
+                                              to the load.
+    @attribute on_button       (TK Button)    The button that turns the input 
+                                              on and off.
+    @attribute voltage_value   (TK Label)     Display of the actual load
+                                              voltage.
+    @attribute current_value   (TK Label)     Display of the actual load
+                                              current.
+    @attribute power_value     (TK Label)     Display of the actual load
+                                              power.
+    
+    """  
+    
+    def __init__(self, gui_frame, gui):
+        """
+        Initialise the PowerSupply Object
+        
+        @param[in] gui_frame  The frame where all GUI items should be put 
+                              (TK Frame)
+        @param[in] gui        The root GUI object (TK tk)
+        @param[in] model      The model of the power supply selected (string)
+        """   
+        
+        # initialise attributes
+        self.frame = gui_frame
+        self.gui = gui
+        self.enabled = False
+        
+        # initialise the powerSupply to be used
+        self.BM = BM2()
+        
+        # load the GUI elements
+        self.load_gui()
+    # end def
+
+
+    def load_gui(self):
+        """
+        Add all the GUI elements to the GUI
+        """
+        
+        # add a border to the frame
+        self.frame.config(borderwidth = 2, relief = 'raised')
+        
+        # title
+        title = TK.Label(self.frame, text = "Battery Module Data", 
+                         font = "Arial 14 bold")
+        title.grid(row = 0, column = 0, columnspan = 4)
+                 
+        # voltage display
+        voltage_title = TK.Label(self.frame, text = "Voltage (V)", 
+                                 font = "Arial 10 italic")
+        voltage_title.grid(row = 1, column = 0)
+        self.voltage_value = TK.Label(self.frame, text = "-")
+        self.voltage_value.grid(row = 2, column = 0, ipadx = 5, ipady = 8)
+        
+        # current display
+        current_title = TK.Label(self.frame, text = "Current (A)", 
+                                     font = "Arial 10 italic")
+        current_title.grid(row = 3, column = 0)
+        self.current_value = TK.Label(self.frame, text = "-")
+        self.current_value.grid(row = 4, column = 0, ipadx = 5, ipady = 8)  
+        
+        # charging voltage display
+        charging_voltage_title = TK.Label(self.frame, text = "Charging Voltage (V)", 
+                                     font = "Arial 10 italic")
+        charging_voltage_title.grid(row = 1, column = 1)
+        self.charging_voltage_value = TK.Label(self.frame, text = "-")
+        self.charging_voltage_value.grid(row = 2, column = 1, ipadx = 5, ipady = 8)
+    
+        # charging current display
+        charging_current_title = TK.Label(self.frame, text = "Charging Current (A)", 
+                                     font = "Arial 10 italic")
+        charging_current_title.grid(row = 3, column = 1)
+        self.charging_current_value = TK.Label(self.frame, text = "-")
+        self.charging_current_value.grid(row = 4, column = 1, ipadx = 5, ipady = 8)     
+        
+        # update status display
+        update_status_title = TK.Label(self.frame, text = "Update Status", 
+                                              font = "Arial 10 italic")
+        update_status_title.grid(row = 1, column = 2)
+        self.update_status_value = TK.Label(self.frame, text = "-")
+        self.update_status_value.grid(row = 2, column = 2, ipadx = 5, ipady = 8)
+    
+        # taper current display
+        taper_current_title = TK.Label(self.frame, text = "Taper Current (A)", 
+                                              font = "Arial 10 italic")
+        taper_current_title.grid(row = 3, column = 2)
+        self.taper_current_value = TK.Label(self.frame, text = "-")
+        self.taper_current_value.grid(row = 4, column = 2, ipadx = 5, ipady = 8)    
+        
+        # RDIS Flag display
+        self.RDIS_flag = TK.Label(self.frame, text = "RDIS")
+        self.RDIS_flag.grid(row = 1, column = 3, ipadx = 5, ipady = 8)    
+        
+        # VOK Flag display
+        self.VOK_flag = TK.Label(self.frame, text = "VOK")
+        self.VOK_flag.grid(row = 2, column = 3, ipadx = 5, ipady = 8)       
+        
+        # QEN Flag display
+        self.QEN_flag = TK.Label(self.frame, text = "QEN")
+        self.QEN_flag.grid(row = 3, column = 3, ipadx = 5, ipady = 8)     
+        
+        # FC Flag display
+        self.FC_flag = TK.Label(self.frame, text = "FC")
+        self.FC_flag.grid(row = 4, column = 3, ipadx = 5, ipady = 8)          
+             
+        # update the gui from the power supply
+        self.update_gui()     
+    #end def 
+    
+    def disable_gui(self):
+        """
+        Disable the GUI elements
+        """
+        self.enabled = False
+        self.voltage_value.config(text = '-')
+        self.current_value.config(text = '-')
+        self.charging_voltage_value.config(text = '-')
+        self.charging_current_value.config(text = '-')
+        self.update_status_value.config(text = '-')
+        self.taper_current_value.config(text = '-')
+        
+        self.RDIS_flag.config(background = self.frame.cget('bg'))
+        self.QEN_flag.config(background = self.frame.cget('bg'))
+        self.VOK_flag.config(background = self.frame.cget('bg'))
+        self.FC_flag.config(background = self.frame.cget('bg'))
+    # end def
+    
+    
+    def update_gui(self):
+        """
+        Update the gui from the Load. This task becomes preiodic once 
+        the GUI is running.
+        """
+        
+        # default values
+        voltage = '-'
+        current = '-'
+        
+        # attempt to communicate with the Load
+        try:
+            with self.BM:
+                # communicatins were successful
+                    
+                self.enabled = True
+                
+                self.voltage_value.config(text = '%.3f' % (self.BM.get_Voltage()/1000.0))
+                self.current_value.config(text = '%.3f' % (self.BM.get_Current()/1000.0))
+                self.charging_voltage_value.config(text = '%.3f' % (self.BM.get_ChargingVoltage()/1000.0))
+                self.charging_current_value.config(text = '%.3f' % (self.BM.get_ChargingCurrent()/1000.0))
+                self.update_status_value.config(text = self.BM.get_UpdateStatus())
+                self.taper_current_value.config(text = '%.3f' % (self.BM.get_TaperCurrent()/1000.0))
+            
+                if self.BM.get_VOK():
+                    self.VOK_flag.config(background = 'green')
+                # end if
+                
+                if self.BM.get_RDIS():
+                    self.RDIS_flag.config(background = 'green')
+                # end if         
+                
+                if self.BM.get_QEN():
+                    self.QEN_flag.config(background = 'green')
+                # end if        
+                
+                if self.BM.get_FC():
+                    self.FC_flag.config(background = 'green')
+                # end if         
+            # end with
+            
+        except:
+            # communcations could not be esablished to disable the gui
+            self.disable_gui()
+        # end try  
+        
+        # schedule the next repetition of this function
+        self.gui.after(1000, self.update_gui)
+    #end def
+    
+    def close_GUI(self):
+        """
+        Function to reset controls on the load when the gui exits.
+        """
+        self.BM.__exit__(None, None, None)
+    # end def
 # end class
     
 
@@ -208,7 +422,6 @@ def configure_aardvark():
         # delay to allow the config to be registered
         aardvark_py.aa_sleep_ms(200)    
         
-        print "Starting Aardvark communications\n"
     # end if    
     
     return Aardvark_in_use
@@ -375,31 +588,19 @@ def _test():
     """
     Test code for this module.
     """
-    try:
-        aardvark = configure_aardvark()
-        
-        print send_SMB_command('0x54', aardvark, 'hex')
-        print send_SMB_command('0x54', aardvark, 'uint')
-        print (send_SMB_command('0x54', aardvark, 'uint') & int('F000',16)) != 0
-        print (send_SMB_command('0x54', aardvark, 'uint') & int('7000',16)) != 0
-        
-        aardvark_py.aa_close(aardvark)
-        
-    except:
-        pass
-    # end try
+    # construct the root frame
+    root = TK.Tk()
+    root.geometry('800x600')
     
-    with BM2() as battery_pack:
-        print battery_pack.get_Voltage()
-        print battery_pack.get_Current()
-        print battery_pack.get_ChargingVoltage()
-        print battery_pack.get_ChargingCurrent()
-        print battery_pack.get_RDIS()
-        print battery_pack.get_VOK()     
-        print battery_pack.get_TaperCurrent()
-        print battery_pack.get_UpdateStatus()
-    #end with
+    # construct a frame for the load gui
+    test_frame = TK.Frame(root)
+    test_frame.grid(row = 0, column = 0)
     
+    # initialise the load gui
+    BM2_gui = BM2_GUI(test_frame, root)
+    
+    # start the GUI
+    root.mainloop()
 # end def
 
 if __name__ == '__main__':
