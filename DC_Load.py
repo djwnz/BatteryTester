@@ -371,7 +371,7 @@ class DC_Load_GUI:
     
     """  
     
-    def __init__(self, gui_frame, gui, model):
+    def __init__(self, gui_frame, gui, model, slave = False):
         """
         Initialise the PowerSupply Object
         
@@ -387,6 +387,7 @@ class DC_Load_GUI:
         self.gui = gui
         self.output_state = 'off'
         self.enabled = False
+        self.slave = slave
         
         # initialise the powerSupply to be used
         self.Load = DCLoad(self.model)
@@ -514,7 +515,7 @@ class DC_Load_GUI:
         P_label.grid(row = 2, column = 1, ipadx = 5, sticky = 'nsew')        
         
         # update the gui from the power supply
-        self.update_gui()     
+        self.update_gui()   
     #end def
     
     
@@ -621,9 +622,11 @@ class DC_Load_GUI:
         """
         Enable the GUI elements
         """
+        if not self.slave:
+            self.on_button.config(state='normal')
+            self.set_button.config(state='normal')
+        # end if
         
-        self.on_button.config(state='normal')
-        self.set_button.config(state='normal')
         self.setting.config(state='normal')  
         self.cc_button.config(state='normal')  
         self.cv_button.config(state='normal')

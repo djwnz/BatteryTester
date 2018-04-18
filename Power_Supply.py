@@ -267,7 +267,7 @@ class Power_Supply_GUI:
                                              to the power supply
     """  
     
-    def __init__(self, gui_frame, gui, model):
+    def __init__(self, gui_frame, gui, model, slave = False):
         """
         Initialise the PowerSupply GUI Object
         
@@ -283,6 +283,7 @@ class Power_Supply_GUI:
         self.gui = gui
         self.output_state = 'off'
         self.enabled = False
+        self.slave = slave
         
         # initialise the powerSupply to be used
         self.PS = PowerSupply(self.model)
@@ -472,10 +473,12 @@ class Power_Supply_GUI:
         Enable the GUI elements
         """
         
-        self.on_button.config(state='normal')
-        self.set_button.config(state='normal')
-        self.voltage_setting.config(state='normal')
-        self.current_setting.config(state='normal')      
+        if not self.slave:
+            self.on_button.config(state='normal')
+            self.set_button.config(state='normal')      
+            self.voltage_setting.config(state='normal')
+            self.current_setting.config(state='normal')    
+        # end if
     # end def    
     
     
@@ -495,12 +498,19 @@ class Power_Supply_GUI:
                 # communicatins were successful
                 if not self.enabled:
                     # if the gui is not enabled then enable it
-                    self.enable_gui()
+                    
+                    self.voltage_setting.config(state='normal')
+                    self.current_setting.config(state='normal') 
                     
                     self.voltage_setting.delete(0,'end')
                     self.voltage_setting.insert(0,str(self.PS.get_voltage()))
                     self.current_setting.delete(0,'end')
                     self.current_setting.insert(0,str(self.PS.get_current()))
+                    
+                    self.voltage_setting.config(state='disabled')
+                    self.current_setting.config(state='disabled')                      
+                    
+                    self.enable_gui()
                     
                     self.enabled = True
                 #end if
