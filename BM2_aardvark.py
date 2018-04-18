@@ -67,8 +67,13 @@ class BM2:
         self.port = configure_aardvark()
         
         if (self.port == None):
-            assert IOError("No Aardvark was found")
-        #end if
+            raise IOError("No Aardvark was found")
+        # end if
+        
+        if ((self.get_ChargingVoltage() == 257) 
+            and (self.get_TaperCurrent() == 257)):
+            raise IOError("No BM2 was detected")
+        # end if
         
         return self
     # end def
@@ -329,9 +334,11 @@ class BM2_GUI:
                 # end if         
             # end with
             
-        except:
+        except Exception as e:
             # communcations could not be esablished to disable the gui
             self.disable_gui()
+            self.BM.__exit__(None, None, None)
+            print e
         # end try  
         
         # schedule the next repetition of this function
