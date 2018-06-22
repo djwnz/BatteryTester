@@ -28,7 +28,9 @@ import Tkinter as TK
 import sys
 import serial
 
-default_port = 'COM2'
+#default_port = 'COM2'
+
+default_port = 'COM10'
 
 
 # ---------
@@ -60,7 +62,7 @@ class PowerSupply(object):
         # check to see if the model requested is selected
         if self.model == 'KA3005P':
             # find the port associated with the KA3005P Power Supply
-            self.port = findKoradPort()
+            self.port = 'COM10'#findKoradPort()
             
         else:
             # The requested power supply is not supported
@@ -82,7 +84,7 @@ class PowerSupply(object):
             # it has not so attempt to detect one based on the model requested
             if self.model == 'KA3005P':
                 # find the port associated with the KA3005P
-                self.port = findKoradPort()
+                self.port = 'COM10'#findKoradPort()
                 
                 # was a port found?
                 if self.port != 'NULL':

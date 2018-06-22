@@ -50,7 +50,7 @@ class Multimeter(object):
         
         # Initialise attributes
         self.model = Model
-        self.port = NULL
+        self.port = 'NULL'
         
         # check to see if the model requested is selected
         if self.model == '34410A':
@@ -139,6 +139,7 @@ class Multimeter(object):
         if self.port != 'NULL':
             if self.model == '34410A':
                 # close comms #TODO
+                pass
             #end if
         # end if        
     #end def    
