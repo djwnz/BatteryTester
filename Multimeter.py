@@ -23,6 +23,7 @@ __version__ = '0.1.0' #Versioning: http://www.python.org/dev/peps/pep-0386/
 # -------
 # Imports
 
+import #Multimeter module
 import Tkinter as TK
 import sys
 
