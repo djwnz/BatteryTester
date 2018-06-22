@@ -23,7 +23,6 @@ __version__ = '0.1.0' #Versioning: http://www.python.org/dev/peps/pep-0386/
 # -------
 # Imports
 
-import #Multimeter module
 import Tkinter as TK
 import sys
 
@@ -56,7 +55,7 @@ class Multimeter(object):
         # check to see if the model requested is selected
         if self.model == '34410A':
             # find the port associated with the 34410A multimeter
-            
+            pass
             # TODO
             
         else:
@@ -80,15 +79,12 @@ class Multimeter(object):
             if self.model == '34410A':
                 # connect to the 34410A
     
-                else:
-                    # no Multimeter was found
-                    raise IOError('No 34410A Multimeter was detected')
-                # end if
+                pass
             # end if
             
         else:
             # A port has previously been found so communicate through that port
-            
+            pass
             # TODO
             
         #end if
@@ -105,7 +101,7 @@ class Multimeter(object):
         @return   (float)     The voltage in volts
         """
         if self.model == '34410A':
-            return #TODO
+            return 8.4#TODO
         # end if 
     # end def
     
@@ -117,7 +113,7 @@ class Multimeter(object):
         @return   (float)     The current in amps
         """        
         if self.model == '34410A':
-            return #TODO
+            return 1.0#TODO
         # end if 
     # end def    
     
@@ -129,7 +125,7 @@ class Multimeter(object):
         @return   (float)     The resistance measurement in ohms
         """        
         if self.model == '34410A':
-            return #TODO
+            return 10000.0#TODO
         # end if
     # end def     
     
