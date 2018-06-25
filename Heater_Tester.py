@@ -44,45 +44,75 @@ def thermistor_voltage(resistance):
     return -10.064*(r_voltage**3) + 55.396*(r_voltage**2) - 129.03*r_voltage + 131.52  
 # end def
 
+# prompt for serial number
+serial_number = raw_input("Enter the heater serial number and then press enter (leave blank to skip)")
+
+# prompt for date code
+date_code = raw_input("Enter the heater date code and then press enter (leave blank to skip)")
+
+# define the filename
+if serial_number = '':
+    output_string = 'heater_test_'
+    
+    # get the current working directory
+    working_dir = os.getcwd()
+    
+    # find output dir
+    output_dir = working_dir + '\\Heater test results\\'
+    
+    # get file list
+    file_list = os.listdir(output_dir)
+    csv_list = [filename for filename in file_list if filename.endswith('.csv')]
+    
+    # find the maximum filename number presetn in the directory
+    max_number = 0
+    for filename in csv_list:
+        try:
+            number = int(filename.split('.')[0].split('_')[2])
+            if number > max_number:
+                max_number = number
+            # end if
+            
+        except:
+            pass
+        # end try
+    # end for
+    
+    # add one to the number
+    max_number += 1
+    
+    # create the new filename
+    new_filename = output_dir + '\\' + output_string + str(max_number) + '.csv'    
+
+else:
+    new_filename = 'heater_' + serial_number + '_validation.csv'
+# end if
+
+# open the csv file
+csv_output = open(new_filename, 'wb')
+output_writer = csv.writer(csv_output, delimiter = '\t')
+
+# write the title
+output_writer.writerow(["Heater validation test for Pumpkin BM Heater"])
+
+# write the heater information
+output_writer.writerow(["Serial Number", serial_number])
+output_writer.writerow(["Date Code", date_code])
+output_writer.writerow([]) # blank line
+
+# write the header row
+output_writer.writerow(['Time (s)', 
+                        'Heater Voltage (V)', 
+                        'Heater Current (A)', 
+                        'Heater Resistance (Ohm)',
+                        'Heater Power (W)', 
+                        'Thermistor Resistance (Ohm)', 
+                        'Thermistor temperature (degC)'])
+
+
+# open communications with the testing hardware
 with Power_Supply.PowerSupply('KA3005P') as PS:
     with Multimeter.Multimeter('34410A') as MM:
-        
-        # get the current working directory
-        working_dir = os.getcwd()
-        
-        # find output dir
-        output_dir = working_dir + '\\Heater test results\\'
-        
-        # get file list
-        file_list = os.listdir(output_dir)
-        csv_list = [filename for filename in file_list if filename.endswith('.csv')]
-        
-        # find the maximum filename number presetn in the directory
-        max_number = 0
-        for filename in csv_list:
-            try:
-                number = int(filename.split('.')[0].split('_')[2])
-                if number > max_number:
-                    max_number = number
-                # end if
-                
-            except:
-                pass
-            # end try
-        # end for
-        
-        # add one to the number
-        max_number += 1
-        
-        # create the new filename
-        new_filename = output_dir + '\\' + output_string + str(max_number) + '.csv'
-        
-        # open a csv file
-        csv_output = open(new_filename, 'wb')
-        output_writer = csv.writer(csv_output, delimiter = '\t')
-        
-        # write the header row
-        output_writer.writerow(['Time (s)', 'Heater Voltage (V)', 'Heater Current (A)', 'Heater Power (W)', 'Thermistor Resistance (Ohm)', 'Thermistor temperature (degC)'])
         
         # record the start time
         start_time = time.time()
@@ -99,12 +129,13 @@ with Power_Supply.PowerSupply('KA3005P') as PS:
             current_time = time.time()-start_time
             voltage = PS.get_output_voltage()
             current = PS.get_output_current()
+            heater_resistance = voltage/current
             power = voltage*current
             resistance = MM.get_resistance()
             temperature = thermistor_voltage(resistance)
             
             # write measurements
-            output_writer.writerow([current_time, voltage, current, power, resistance, temperature])
+            output_writer.writerow([current_time, voltage, current, heater_resistance, power, resistance, temperature])
             
             # wait for time to pass to maintain timing
             while (time.time() < (start_time + current_time + 1.0/DATA_RATE)):
@@ -114,13 +145,16 @@ with Power_Supply.PowerSupply('KA3005P') as PS:
         
         # turn off the output
         PS.output_off()
-        
-        # close the csv file
-        csv_output.close() 
     # end with
 # end with
 
+# close the csv file
+csv_output.close() 
+
 print 'Test Completed!'
+
+# prompt to show output
+raw_input()
             
         
         
