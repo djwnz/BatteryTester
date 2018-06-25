@@ -172,6 +172,7 @@ class Multimeter(object):
             if self.model == '34410A':
                 self.port.close()
                 self.port = None
+
             #end if
         # end if        
     #end def    
