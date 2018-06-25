@@ -25,7 +25,14 @@ __version__ = '0.1.0' #Versioning: http://www.python.org/dev/peps/pep-0386/
 
 import Tkinter as TK
 import sys
+import ivi
+import time
 
+# Constants for Agilent 34410A Digital Multimeter
+Agilent34410AIPAddress = "192.168.1.124"
+AgilentDCVoltsMode = "dc_volts"
+AgilentDCCurrentMode = "dc_current"
+AgilentTwoWireReistanceMode = "two_wire_resistance"
 
 # ---------
 # Classes
@@ -40,7 +47,7 @@ class Multimeter(object):
     @attribute port     (string)     The port used by the multimeter
     @attribute MM       (object)     The multimeter object
     """    
-    
+
     def __init__(self, Model):
         """
         Initialise the PowerSupply Object
@@ -50,14 +57,12 @@ class Multimeter(object):
         
         # Initialise attributes
         self.model = Model
-        self.port = NULL
+        self.port = None
         
         # check to see if the model requested is selected
         if self.model == '34410A':
-            # find the port associated with the 34410A multimeter
-            pass
             # TODO
-            
+            pass
         else:
             # The requested multimeter is not supported
             raise ValueError('The Multimeter model selected is not supported'+
@@ -74,12 +79,18 @@ class Multimeter(object):
         """        
         
         # check to see if a multimeter has been detected previously
-        if self.port == 'NULL':
+        if self.port is None:
             # it has not so attempt to detect one based on the model requested
             if self.model == '34410A':
                 # connect to the 34410A
-    
-                pass
+                # find the port associated with the 34410A multimeter
+                dmm_ip = "TCPIP0::{}::INSTR".format(Agilent34410AIPAddress)
+                try:
+                    self.port = ivi.agilent.agilent34410A(dmm_ip)
+                except:
+                    print("Failed to initialize the Agilent 34410A DMM, Is the ip address {} correct?".format(
+                        Agilent34410AIPAddress))
+                    raise
             # end if
             
         else:
@@ -101,7 +112,14 @@ class Multimeter(object):
         @return   (float)     The voltage in volts
         """
         if self.model == '34410A':
-            return 8.4#TODO
+            try:
+                self.port.measurement_function = AgilentDCVoltsMode
+                self.port.measurement.initiate()
+                return self.port.measurement.fetch(100)
+            except:
+                print("Failed to get DC Voltage, is the DMM still on and connected?")
+                raise
+        return 0
         # end if 
     # end def
     
@@ -113,7 +131,14 @@ class Multimeter(object):
         @return   (float)     The current in amps
         """        
         if self.model == '34410A':
-            return 1.0#TODO
+            try:
+                self.port.measurement_function = AgilentDCCurrentMode
+                self.port.measurement.initiate()
+                return self.port.measurement.fetch(100)
+            except:
+                print("Failed to get DC Current, is the DMM still on and connected?")
+                raise
+        return 1.0#TODO
         # end if 
     # end def    
     
@@ -125,7 +150,14 @@ class Multimeter(object):
         @return   (float)     The resistance measurement in ohms
         """        
         if self.model == '34410A':
-            return 10000.0#TODO
+            try:
+                self.port.measurement_function = AgilentTwoWireReistanceMode
+                self.port.measurement.initiate()
+                return self.port.measurement.fetch(100)
+            except:
+                print("Failed to get resistance, is the DMM still on and connected?")
+                raise
+        return 0
         # end if
     # end def     
     
@@ -136,9 +168,10 @@ class Multimeter(object):
         power supply
         """
         # only close a port if one was found.
-        if self.port != 'NULL':
+        if self.port is not None:
             if self.model == '34410A':
-                # close comms #TODO
+                self.port.close()
+                self.port = None
             #end if
         # end if        
     #end def    
@@ -238,6 +271,21 @@ def _test():
     """
     Test code for this module.
     """
+    print("Opening DMM")
+    with Multimeter("34410A") as dmm:
+        # Take volts measurement
+        print("Getting DC Volts")
+        print("DC Volts: {}".format(dmm.get_DC_voltage()))
+        print("Sleeping for 20 seconds")
+        time.sleep(20)
+        print("Getting Two-Wire Resistance")
+        print("Two-Wire Resistance: {}".format(dmm.get_resistance()))
+        print("Sleeping for 20 seconds")
+        time.sleep(20)
+        print("Getting DC Current")
+        print("DC Current: {}".format(dmm.get_DC_current()))
+        print("Done testing Agilent 34410A DMM")
+
     # construct the root frame
     root = TK.Tk()
     root.geometry('800x600')
