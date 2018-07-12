@@ -40,8 +40,8 @@ def thermistor_voltage(resistance):
     # find the eqvialent voltage as measured on a SupMCU
     r_voltage = 3.3*resistance/(10000+resistance)
     
-    # use the 3dof model to get the temperature
-    return -10.064*(r_voltage**3) + 55.396*(r_voltage**2) - 129.03*r_voltage + 131.52  
+    # use the 5dof model to get the temperature
+    return -5.0166*(r_voltage**5) + 43.717*(r_voltage**4) - 149.818*(r_voltage**3) + 254.24*(r_voltage**2) - 249.58*(r_voltage) + 155.05
 # end def
 
 # prompt for serial number
