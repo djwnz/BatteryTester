@@ -62,7 +62,7 @@ class PowerSupply(object):
         # check to see if the model requested is selected
         if self.model == 'KA3005P':
             # find the port associated with the KA3005P Power Supply
-            self.port = 'COM10'#findKoradPort()
+            self.port = findKoradPort()
             
         else:
             # The requested power supply is not supported

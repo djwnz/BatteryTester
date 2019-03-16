@@ -111,6 +111,18 @@ class BM2:
         return send_SMB_command('0x54', self.port, 'uint')
     #end def       
     
+    def get_SafetyAlert(self):
+        return send_SMB_command('0x50', self.port, 'uint')
+    #end def           
+    
+    def get_MaxError(self):
+        return send_SMB_command('0x0C', self.port, 'char')
+    #end def    
+    
+    def get_BatteryStatus(self):
+        return send_SMB_command('0x16', self.port, 'uint')
+    #end def     
+    
     def get_RDIS(self):
         return (self.get_OperationStatus() & int('0004',16)) != 0
     # end def
@@ -122,6 +134,14 @@ class BM2:
     def get_QEN(self):
         return (self.get_OperationStatus() & int('0001',16)) != 0
     # end def    
+    
+    def get_CUV(self):
+        return (self.get_SafetyAlert() & int('0080',16)) != 0
+    # end def    
+    
+    def get_FC(self):
+        return (self.get_BatteryStatus() & int('0020',16)) != 0
+    # end def     
     
     def get_TaperCurrent(self):
         send_SMB_data(['0x77', '0x24', '0x00'], self.port)
@@ -414,7 +434,7 @@ def configure_aardvark():
         
         # set it up in teh mode we need for pumpkin modules
         aardvark_py.aa_configure(Aardvark_in_use, 
-                                 aardvark_py.AA_CONFIG_SPI_I2C)
+                                 aardvark_py.AA_CONFIG_GPIO_I2C)
         
         # default to both pullups on
         aardvark_py.aa_i2c_pullup(Aardvark_in_use, 
@@ -565,8 +585,8 @@ def send_SMB_command(command, Aardvark_in_use, return_format):
                                                 out_data, in_data)  
             
             return list(in_data)
-        # end if           
-            
+        # end if         
+               
     else:
         return None
     # end if
