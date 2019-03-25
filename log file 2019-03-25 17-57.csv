@@ -1,0 +1,2 @@
+time,voltage,current,ChargingVoltage,ChargingCurrent,OperationStatus,SafetyAlert,MaxError,BatteryStatus,CellVoltage1,CellVoltage2,CellVoltage3,CellVoltage4,UpdateStatus
+3.1089999675750732,8206,0,8400,16,32833,0,100,231,4098,4108,0,0,0x04

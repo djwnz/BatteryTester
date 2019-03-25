@@ -43,6 +43,57 @@ Bitrate = 100
 # ----------------
 # Classes
 
+class BM2_Data:
+    def __init__(self):
+        self.Voltage = 0
+        self.Current = 0
+        self.ChargingVoltage = 0
+        self.ChargingCurrent = 0
+        self.OperationStatus = 0
+        self.SafetyAlert = 0
+        self.MaxError = 0
+        self.BatteryStatus = 0
+        self.CellVoltage1 = 0
+        self.CellVoltage2 = 0
+        self.CellVoltage3 = 0
+        self.CellVoltage4 = 0
+        self.UpdateStatus = 0
+        
+        self.headers = ['time', 
+                        'voltage', 
+                        'current', 
+                        'ChargingVoltage', 
+                        'ChargingCurrent', 
+                        'OperationStatus', 
+                        'SafetyAlert', 
+                        'MaxError', 
+                        'BatteryStatus', 
+                        'CellVoltage1', 
+                        'CellVoltage2', 
+                        'CellVoltage3', 
+                        'CellVoltage4', 
+                        'UpdateStatus']
+    # end def
+    
+    def to_list(self, time):
+        return [time, 
+                self.Voltage, 
+                self.Current, 
+                self.ChargingVoltage, 
+                self.ChargingCurrent,
+                self.OperationStatus,
+                self.SafetyAlert,
+                self.MaxError,
+                self.BatteryStatus,
+                self.CellVoltage1,
+                self.CellVoltage2,
+                self.CellVoltage3,
+                self.CellVoltage4,
+                self.UpdateStatus]
+    # end def
+# end def
+        
+
 class BM2:
     """
     Class that operates the Aardvark device
@@ -57,6 +108,7 @@ class BM2:
         Initialise the BM2 object to its default values
         """
         self.port = None
+        self.Data = BM2_Data()
         
     #end def
 
@@ -91,6 +143,52 @@ class BM2:
         self.port = None
     #end def
     
+    def validate_data(self):
+        if self.Data.MaxError > 100:
+            return False
+        
+        elif (self.Data.Voltage > 17000) or (self.Data.Voltage < 5000):
+            return False
+        
+        elif (self.Data.CellVoltage1 > 4500) or (self.Data.CellVoltage1 < 2000):
+            return False
+        
+        elif (self.Data.CellVoltage2 > 4500) or (self.Data.CellVoltage2 < 2000):
+            return False
+
+
+        elif (self.Data.CellVoltage3 > 4500):
+            return False
+        
+        elif (self.Data.CellVoltage4 > 4500):
+            return False
+        
+        elif ((self.Data.OperationStatus & 0x8000) == 0):
+              return False
+                
+        else:
+            return True
+        # end if
+    # end def
+    
+    def update_data(self):
+        self.Data.Voltage = self.get_Voltage()
+        self.Data.Current = self.get_Current()
+        self.Data.ChargingVoltage = self.get_ChargingVoltage()
+        self.Data.ChargingCurrent = self.get_ChargingCurrent()
+        self.Data.OperationStatus = self.get_OperationStatus()
+        self.Data.SafetyAlert = self.get_SafetyAlert()
+        self.Data.MaxError = self.get_MaxError()
+        self.Data.BatteryStatus = self.get_BatteryStatus()
+        self.Data.CellVoltage1 = self.get_CellVoltage1()
+        self.Data.CellVoltage2 = self.get_CellVoltage2()
+        self.Data.CellVoltage3 = self.get_CellVoltage3()
+        self.Data.CellVoltage4 = self.get_CellVoltage4()
+        self.Data.UpdateStatus = self.get_UpdateStatus()
+        
+        return self.validate_data()
+    # end def
+    
     def get_Voltage(self):
         return send_SMB_command('0x09', self.port, 'uint')
     #end def
@@ -121,26 +219,42 @@ class BM2:
     
     def get_BatteryStatus(self):
         return send_SMB_command('0x16', self.port, 'uint')
+    #end def    
+    
+    def get_CellVoltage1(self):
+        return send_SMB_command('0x3f', self.port, 'uint')
     #end def     
     
+    def get_CellVoltage2(self):
+        return send_SMB_command('0x3e', self.port, 'uint')
+    #end def  
+    
+    def get_CellVoltage3(self):
+        return send_SMB_command('0x3d', self.port, 'uint')
+    #end def  
+    
+    def get_CellVoltage4(self):
+        return send_SMB_command('0x3c', self.port, 'uint')
+    #end def      
+    
     def get_RDIS(self):
-        return (self.get_OperationStatus() & int('0004',16)) != 0
+        return (self.Data.OperationStatus & int('0004',16)) != 0
     # end def
     
     def get_VOK(self):
-        return (self.get_OperationStatus() & int('0002',16)) != 0
+        return (self.Data.OperationStatus & int('0002',16)) != 0
     # end def    
     
     def get_QEN(self):
-        return (self.get_OperationStatus() & int('0001',16)) != 0
+        return (self.Data.OperationStatus & int('0001',16)) != 0
     # end def    
     
     def get_CUV(self):
-        return (self.get_SafetyAlert() & int('0080',16)) != 0
+        return (self.Data.SafetyAlert & int('0080',16)) != 0
     # end def    
     
     def get_FC(self):
-        return (self.get_BatteryStatus() & int('0020',16)) != 0
+        return (self.Data.BatteryStatus & int('0020',16)) != 0
     # end def     
     
     def get_TaperCurrent(self):
