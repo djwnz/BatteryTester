@@ -1,0 +1,1 @@
+time,voltage,current,ChargingVoltage,ChargingCurrent,OperationStatus,SafetyAlert,MaxError,BatteryStatus,CellVoltage1,CellVoltage2,CellVoltage3,CellVoltage4,UpdateStatus

@@ -51,6 +51,7 @@ class BM2_Data:
         self.ChargingCurrent = 0
         self.OperationStatus = 0
         self.SafetyAlert = 0
+        self.SafetyStatus = 0
         self.MaxError = 0
         self.BatteryStatus = 0
         self.CellVoltage1 = 0
@@ -66,6 +67,7 @@ class BM2_Data:
                         'ChargingCurrent', 
                         'OperationStatus', 
                         'SafetyAlert', 
+                        'SafetyStatus',
                         'MaxError', 
                         'BatteryStatus', 
                         'CellVoltage1', 
@@ -83,6 +85,7 @@ class BM2_Data:
                 self.ChargingCurrent,
                 self.OperationStatus,
                 self.SafetyAlert,
+                self.SafetyStatus,
                 self.MaxError,
                 self.BatteryStatus,
                 self.CellVoltage1,
@@ -122,12 +125,24 @@ class BM2:
             raise IOError("No Aardvark was found")
         # end if
         
-        if ((self.get_ChargingVoltage() == 257) 
-            and (self.get_TaperCurrent() == 257)):
-            raise IOError("No BM2 was detected")
-        # end if
+        #if ((self.get_ChargingVoltage() == 257) 
+            #and (self.get_TaperCurrent() == 257)):
+            #raise IOError("No BM2 was detected")
+        ## end if
         
         return self
+    # end def
+    
+    def open(self):
+        """
+        If used in another 'with' capable mosule this provides __enter__ 
+        functionality
+        """
+        self.port = configure_aardvark()
+        
+        if (self.port == None):
+            raise IOError("No Aardvark was found")
+        # end if
     # end def
     
     def __exit__(self, type, value, traceback):
@@ -143,8 +158,20 @@ class BM2:
         self.port = None
     #end def
     
+    def close(self):
+        """
+        If used in another 'with' capable module this provided __exit__ 
+        functionality
+        """
+        if self.port != None:
+            aardvark_py.aa_close(self.port)
+        #end if
+        
+        self.port = None
+    #end def        
+    
     def validate_data(self):
-        if self.Data.MaxError > 100:
+        if self.Data.MaxError > 200:
             return False
         
         elif (self.Data.Voltage > 17000) or (self.Data.Voltage < 5000):
@@ -155,7 +182,6 @@ class BM2:
         
         elif (self.Data.CellVoltage2 > 4500) or (self.Data.CellVoltage2 < 2000):
             return False
-
 
         elif (self.Data.CellVoltage3 > 4500):
             return False
@@ -178,6 +204,7 @@ class BM2:
         self.Data.ChargingCurrent = self.get_ChargingCurrent()
         self.Data.OperationStatus = self.get_OperationStatus()
         self.Data.SafetyAlert = self.get_SafetyAlert()
+        self.Data.SafetyStatus = self.get_SafetyStatus()
         self.Data.MaxError = self.get_MaxError()
         self.Data.BatteryStatus = self.get_BatteryStatus()
         self.Data.CellVoltage1 = self.get_CellVoltage1()
@@ -211,7 +238,11 @@ class BM2:
     
     def get_SafetyAlert(self):
         return send_SMB_command('0x50', self.port, 'uint')
-    #end def           
+    #end def      
+    
+    def get_SafetyStatus(self):
+        return send_SMB_command('0x51', self.port, 'uint')
+    #end def    
     
     def get_MaxError(self):
         return send_SMB_command('0x0C', self.port, 'char')
@@ -307,7 +338,6 @@ class BM2_GUI:
                                               current.
     @attribute power_value     (TK Label)     Display of the actual load
                                               power.
-    
     """  
     
     def __init__(self, gui_frame, gui):
@@ -740,6 +770,10 @@ def _test():
     # initialise the load gui
     BM2_gui = BM2_GUI(test_frame, root)
     
+    #BM = BM2()
+    #with BM:
+        #print BM.get_Voltage()
+        
     # start the GUI
     root.mainloop()
 # end def

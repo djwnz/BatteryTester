@@ -13,16 +13,16 @@ import datetime
 
 # profile specific settings
 DISCHARGE_CURRENT = 2.4    # A
-CHARGE_CURRENT    = 2      # A
+CHARGE_CURRENT    = 3.5      # A
 CHARGE_VOLTAGE    = 8.4    # V
-TERM_VOLTAGE      = 6100   # mV
+TERM_VOLTAGE      = 4100   # mV
 
 # other settings
 STATE_PAUSE       = 60     # s
-SAMPLE_RATE_MS    = 2000  # ms
+SAMPLE_RATE_MS    = 1000  # ms
 SLEEP_ONE_SEC     = 1000   # ms
 MESSAGE_PERIOD    = 600    # s
-IMBALANCE_LIMIT   = 50     # mV
+IMBALANCE_LIMIT   = 100     # mV
 
 # tracker for state changes
 PASS_CRITERIA = 3
@@ -97,7 +97,7 @@ def log_data(BM):
         csv_file.close()
         
     except:
-        print "failed to sccess the log file"
+        print "failed to access the log file"
     # end try  
 # end def
     
@@ -157,6 +157,8 @@ previous_state          = COMPLETE
 
 last_message_time = start_time
 rest_start_time = start_time
+
+break_count = 0
 
 with BM:
     BM2_power_switch_init()  
@@ -229,13 +231,23 @@ with BM:
             
             # check exit criteria
             if BM.get_CUV() == True:
+                break_count += 1
+            
+            else:
+                break_count = 0
+            # end if
+            
+            if break_count >=2:
                 if (current_state == INITIAL_DISCHARGE):
                     current_state = LOW_REST
                     
                 else:
                     current_state = MAX_ERROR_WAIT
-                # end if
+                # end if  
+                
+                break_count = 0
             # end if
+                
             
         elif (current_state == LOW_REST):
             if (previous_state != current_state):
@@ -250,6 +262,13 @@ with BM:
                     print "Cell volatages = " + str([BM.Data.CellVoltage1, BM.Data.CellVoltage2, BM.Data.CellVoltage3, BM.Data.CellVoltage4]) + "mV"
                 # end if      
                 
+                #check faults
+                if (BM.Data.SafetyStatus > 0):
+                    print "Warning, Fault occurred at bottom of discharge"
+                    
+                    print "SafetyStatus = " + str(BM.Data.SafetyStatus)
+                # end if                 
+                
                 rest_start_time = time.time()
             # end if
         
@@ -261,7 +280,15 @@ with BM:
             
             # check exit criteria
             if ((time.time() - rest_start_time) > STATE_PAUSE*10):
+                break_count += 1
+            
+            else:
+                break_count = 0
+            # end if
+            
+            if break_count >=2:                
                 current_state = IT_SETUP
+                break_count = 0
             # end if
         
         elif (current_state == IT_SETUP):
@@ -282,7 +309,15 @@ with BM:
             
             # check exit criteria
             if ((BM.get_QEN() == 1) and (BM.get_RDIS() == 0)):
+                break_count += 1
+            
+            else:
+                break_count = 0
+            # end if
+            
+            if break_count >=2:                 
                 current_state = CHARGE
+                break_count = 0
             # end if
             
         elif (current_state == CHARGE):
@@ -310,7 +345,15 @@ with BM:
                      
             # check exit criteria
             if (BM.get_FC() == True):
+                break_count += 1
+            
+            else:
+                break_count = 0
+            # end if
+            
+            if break_count >=2:                 
                 current_state = VOK_WAIT
+                break_count = 0
             # end if
             
         elif (current_state == VOK_WAIT):
@@ -335,7 +378,15 @@ with BM:
       
             # check exit criteria
             if (BM.get_VOK() == False) and (BM.Data.MaxError == 3) and (BM.Data.UpdateStatus == '0x0D'):
+                break_count += 1
+            
+            else:
+                break_count = 0
+            # end if
+            
+            if break_count >=2:                 
                 current_state = FINAL_DISCHARGE
+                break_count = 0
             # end if
             
         elif (current_state == MAX_ERROR_WAIT):
@@ -346,6 +397,13 @@ with BM:
             
             #disconnect the pack from the load
             BM2_power_switch_set(0)
+            
+            #check faults
+            if (BM.Data.SafetyStatus > 0):
+                print "Warning, Fault occurred at bottom of discharge"
+                
+                print "SafetyStatus = " + str(BM.Data.SafetyStatus)
+            # end if            
             
             try:
                 with Load:
@@ -368,7 +426,15 @@ with BM:
             
             # check exit criteria
             if (BM.Data.MaxError == 1) and (BM.get_VOK() == False) and (BM.Data.UpdateStatus == '0x0E'):
+                break_count += 1
+            
+            else:
+                break_count = 0
+            # end if
+            
+            if break_count >=2:                 
                 current_state = COMPLETE
+                break_count = 0
             # end if
             
             if ((time.time() - last_message_time) > MESSAGE_PERIOD):

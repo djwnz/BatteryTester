@@ -27,6 +27,7 @@ import Tkinter as TK
 import sys
 import ivi
 import time
+import visa
 
 # Constants for Agilent 34410A Digital Multimeter
 Agilent34410AIPAddress = "192.168.1.124"
@@ -34,6 +35,8 @@ AgilentDCVoltsMode = "dc_volts"
 AgilentDCCurrentMode = "dc_current"
 AgilentTwoWireReistanceMode = "two_wire_resistance"
 
+# Constants for the Rigol DM3058E Digital Multimeter
+RigolDM3058Especifier = '0x09C4::DM3R185250778'
 # ---------
 # Classes
 
@@ -58,11 +61,17 @@ class Multimeter(object):
         # Initialise attributes
         self.model = Model
         self.port = None
+        self.rm = None
         
         # check to see if the model requested is selected
         if self.model == '34410A':
             # TODO
             pass
+        
+        elif self.model == 'DM3058E':
+            self.rm = visa.ResourceManager()
+            pass
+        
         else:
             # The requested multimeter is not supported
             raise ValueError('The Multimeter model selected is not supported'+
@@ -91,6 +100,18 @@ class Multimeter(object):
                     print("Failed to initialize the Agilent 34410A DMM, Is the ip address {} correct?".format(
                         Agilent34410AIPAddress))
                     raise
+                # end try
+                
+            elif self.model == 'DM3058E':
+                dmm_ip = "USB0::0x1AB1::{}::INSTR".format(RigolDM3058Especifier)
+                try:
+                    self.port = self.rm.open_resource(dmm_ip)
+                    self.port.write(":FUNCtion2:VOLTage:DC")
+                except:
+                    print("Failed to initialize the Rigol 3DM3058E DMM, Is the usd specifier {} correct?".format(
+                        RigolDM3058Especifier))
+                    raise   
+                # end try
             # end if
             
         else:
@@ -104,8 +125,48 @@ class Multimeter(object):
         return self
     # end def
     
+    def open(self):
+        """
+        Use in place of __enter__ in classes that are compliant with the 'with' 
+        statement
+        """        
+        
+        # check to see if a multimeter has been detected previously
+        if self.port is None:
+            # it has not so attempt to detect one based on the model requested
+            if self.model == '34410A':
+                # connect to the 34410A
+                # find the port associated with the 34410A multimeter
+                dmm_ip = "TCPIP0::{}::INSTR".format(Agilent34410AIPAddress)
+                try:
+                    self.port = ivi.agilent.agilent34410A(dmm_ip)
+                except:
+                    print("Failed to initialize the Agilent 34410A DMM, Is the ip address {} correct?".format(
+                        Agilent34410AIPAddress))
+                    raise
+                # end try
+                
+            elif self.model == 'DM3058E':
+                dmm_ip = "USB0::0x1AB1::{}::INSTR".format(RigolDM3058Especifier)
+                try:
+                    self.port = self.rm.open_resource(dmm_ip)
+                    self.port.write(":FUNCtion2:VOLTage:DC")
+                except:
+                    print("Failed to initialize the Rigol 3DM3058E DMM, Is the usd specifier {} correct?".format(
+                        RigolDM3058Especifier))
+                    raise   
+                # end try
+            # end if
+            
+        else:
+            # A port has previously been found so communicate through that port
+            pass
+            # TODO
+        #end if
+    # end def
     
-    def get_DC_voltage(self):
+    
+    def get_DC_voltage(self, secondary = False):
         """ 
         Retrieve a voltage measurement from the Multimeter
         
@@ -119,12 +180,38 @@ class Multimeter(object):
             except:
                 print("Failed to get DC Voltage, is the DMM still on and connected?")
                 raise
-        return 0
+            # end try
+            
+        elif self.model == 'DM3058E':
+            if secondary == False:
+                if self.port.query(":FUNCtion?") != 'DCV\n':
+                    self.port.write(":FUNCtion:VOLTage:DC")
+                # end if
+                try:
+                    return float(self.port.query(":FUNCtion2:VALUe1?"))
+                except:
+                    print("Failed to get DC Voltage, is the DMM still on and connected?")
+                    raise  
+                # end try
+            
+            else:
+                if self.port.query(":FUNCtion2?") != 'DCV':
+                    self.port.write(":FUNCtion2:VOLTage:DC")
+                # end if
+                try:
+                    return float(self.port.query(":FUNCtion2:VALUe2?"))
+                except:
+                    print("Failed to get DC Voltage, is the DMM still on and connected?")
+                    raise  
+                # end try     
+            # end if
         # end if 
+        
+        return 0
     # end def
     
     
-    def get_DC_current(self):
+    def get_DC_current(self, secondary = False):
         """ 
         Retrieve a current measurement from the Multimeter
         
@@ -138,12 +225,38 @@ class Multimeter(object):
             except:
                 print("Failed to get DC Current, is the DMM still on and connected?")
                 raise
-        return 1.0#TODO
+            # end try
+            
+        elif self.model == 'DM3058E':
+            if secondary == False:
+                if self.port.query(":FUNCtion?") != 'DCI\n':
+                    self.port.write(":FUNCtion:CURRent:DC")
+                # end if
+                try:
+                    return float(self.port.query(":FUNCtion2:VALUe1?"))
+                except:
+                    print("Failed to get DC Current, is the DMM still on and connected?")
+                    raise  
+                # end try
+            
+            else:
+                if self.port.query(":FUNCtion2?") != 'DCI\n':
+                    self.port.write(":FUNCtion2:CURRent:DC")
+                # end if
+                try:
+                    return float(self.port.query(":FUNCtion2:VALUe2?"))
+                except:
+                    print("Failed to get DC Current, is the DMM still on and connected?")
+                    raise  
+                # end try     
+            # end if
         # end if 
+        
+        return 0
     # end def    
     
     
-    def get_resistance(self):
+    def get_resistance(self, secondary = False):
         """ 
         Retrieve a resistance measurement from the Multimeter
         
@@ -155,10 +268,40 @@ class Multimeter(object):
                 self.port.measurement.initiate()
                 return self.port.measurement.fetch(100)
             except:
-                print("Failed to get resistance, is the DMM still on and connected?")
+                print("Failed to get Resistance, is the DMM still on and connected?")
                 raise
+                # end try
+
+        elif self.model == 'DM3058E':
+            if secondary == False:
+                if self.port.query(":FUNCtion?") != '2WR':
+                    self.port.write(":FUNCtion:RESistance")
+                # end if
+                try:
+                    return float(self.port.query(":FUNCtion2:VALUe1?"))
+                except:
+                    print("Failed to get Resistance, is the DMM still on and connected?")
+                    raise  
+                # end try
+            
+            else:
+                if self.port.query(":FUNCtion?") != '2WR':
+                    print("Secondary Resistance is only available when primary is Resistance too")
+                    return 0
+                
+                elif self.port.query(":FUNCtion2?") != '2WR':
+                    self.port.write(":FUNCtion2:RESistance")
+                # end if
+                try:
+                    return float(self.port.query(":FUNCtion2:VALUe2?"))
+                except:
+                    print("Failed to get Resistance, is the DMM still on and connected?")
+                    raise  
+                # end try     
+            # end if            
+        # end if 
+    
         return 0
-        # end if
     # end def     
     
     
@@ -172,10 +315,30 @@ class Multimeter(object):
             if self.model == '34410A':
                 self.port.close()
                 self.port = None
-
+                
+            elif self.port == 'DM3058E':
+                self.port.close()
+                self.port = None
             #end if
         # end if        
     #end def    
+    
+    def close(self):
+        """
+        use in place of __exit__ in classes that use the 'with' statement
+        """
+        # only close a port if one was found.
+        if self.port is not None:
+            if self.model == '34410A':
+                self.port.close()
+                self.port = None
+                
+            elif self.port == 'DM3058E':
+                self.port.close()
+                self.port = None
+            #end if
+        # end if        
+    #end def     
 # end class            
             
 #
@@ -273,19 +436,44 @@ def _test():
     Test code for this module.
     """
     print("Opening DMM")
-    with Multimeter("34410A") as dmm:
+    #with Multimeter("34410A") as dmm:
+        ## Take volts measurement
+        #print("Getting DC Volts")
+        #print("DC Volts: {}".format(dmm.get_DC_voltage()))
+        #print("Sleeping for 20 seconds")
+        #time.sleep(20)
+        #print("Getting Two-Wire Resistance")
+        #print("Two-Wire Resistance: {}".format(dmm.get_resistance()))
+        #print("Sleeping for 20 seconds")
+        #time.sleep(20)
+        #print("Getting DC Current")
+        #print("DC Current: {}".format(dmm.get_DC_current()))
+        #print("Done testing Agilent 34410A DMM")
+        
+    with Multimeter("DM3058E") as dmm:
         # Take volts measurement
         print("Getting DC Volts")
         print("DC Volts: {}".format(dmm.get_DC_voltage()))
-        print("Sleeping for 20 seconds")
-        time.sleep(20)
+        print("Sleeping for 2 seconds")
+        time.sleep(2)      
         print("Getting Two-Wire Resistance")
         print("Two-Wire Resistance: {}".format(dmm.get_resistance()))
-        print("Sleeping for 20 seconds")
-        time.sleep(20)
+        print("Sleeping for 2 seconds")
+        time.sleep(2)
         print("Getting DC Current")
         print("DC Current: {}".format(dmm.get_DC_current()))
-        print("Done testing Agilent 34410A DMM")
+        time.sleep(2)   
+        print("Getting DC Volts")
+        print("DC Volts: {}".format(dmm.get_DC_voltage(secondary = True)))
+        print("Sleeping for 2 seconds")
+        time.sleep(2)      
+        print("Getting Two-Wire Resistance")
+        print("Two-Wire Resistance: {}".format(dmm.get_resistance(secondary = True)))
+        print("Sleeping for 2 seconds")
+        time.sleep(2)
+        print("Getting DC Current")
+        print("DC Current: {}".format(dmm.get_DC_current(secondary = True)))        
+        print("Done testing Agilent 34410A DMM")  
 
     # construct the root frame
     root = TK.Tk()
@@ -296,7 +484,7 @@ def _test():
     test_frame.grid(row = 0, column = 0)
     
     # initialise the power supply gui
-    PS_GUI = Power_Supply_GUI(test_frame, root, 'KA3005P')
+    #PS_GUI = Power_Supply_GUI(test_frame, root, 'KA3005P')
     
     # start the GUI
     root.mainloop()
