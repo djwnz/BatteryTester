@@ -22,6 +22,8 @@ min_power = 0.1
 max_power = 15
 power_step = 2
 
+dropout_voltage = 4.9
+
 power_settings = list(numpy.arange(min_power, max_power, power_step))
 
 output_filename = "Efficiency test.csv"
@@ -82,7 +84,7 @@ with open(full_filename, 'wb') as csv_output:
                     input_current = PS.get_output_current()
                     input_power = input_voltage*input_current
                     
-                    if output_voltage < 4.9:
+                    if output_voltage < dropout_voltage:
                         print "at " + str(input_voltage) + "V input, output has drooped to " + str(output_voltage) + "V, current drawn is " + str(input_current) + "A"
                     # end if
                     
