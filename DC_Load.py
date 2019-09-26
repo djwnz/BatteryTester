@@ -27,6 +27,7 @@ from pyMaynuo import MaynuoDCLoad
 import Tkinter as TK
 import sys
 import serial
+import time
 
 # default values for the gui
 gui_defaults = {'constant_current':    ['2.0', 'Amps'],
@@ -114,6 +115,10 @@ class DCLoad(object):
         return self
     # end def
     
+    def re_enter(self):
+        self.__enter__()
+    # end def
+    
     
     def load_on(self):
         """ 
@@ -180,8 +185,12 @@ class DCLoad(object):
             
         elif mode == 'constant_power':
             if self.model == 'M9711':
-                self.Load.setConstantPower(value)
-                self.Load.setMode(mode)
+                try:
+                    self.Load.setConstantPower(value)
+                    time.sleep(0.010)
+                    self.Load.setMode(mode)
+                except ValueError:
+                    print "known issue with checksum failure, writing probably still worked"
             # end if
         #endif
             
