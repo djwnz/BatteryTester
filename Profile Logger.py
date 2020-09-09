@@ -15,27 +15,21 @@ sys.path.insert(1, '../process/src')
 import process_SCPI
 
 # set constants
-output_filename = "IR test.csv"
+output_filename = "Profile Log.csv"
 full_filename = os.getcwd() + '/' + output_filename
 
 timestep = 5
-pulse_width = 60
-taper_current = 0.200
-charge_voltage = 16.8
-charge_current = 4
+taper_current = 0.050
+charge_voltage = 4.2
+charge_current = 1.25
+discharge_current = 0.500
 min_voltage = 2.5
-
-fast_current = 3
-slow_current = 0.3
 
 rest_duration = 3600
 
-pulse_loops = pulse_width/timestep
-
 is_test = False
-do_random = True
 use_BM2 = False
-use_I2C = True
+use_I2C = False
 invert_current = True
 
 class Measurement_device:
@@ -72,10 +66,10 @@ class Measurement_device:
             
         else:
             if invert_current:
-                return ((self.device.get_DC_current(secondary = True)*-1) < taper_current)
+                return ((self.device.get_DC_current()*-1) < taper_current)
             
             else:
-                return (self.device.get_DC_current(secondary = True) < taper_current)
+                return (self.device.get_DC_current() < taper_current)
             # end if
         # end if    
     # end def
@@ -92,7 +86,7 @@ class Measurement_device:
             return (self.device.read_SCPI("BM2:TEL? 80,data", "0x5C", "uint") & int('0080',16)) != 0
             
         else:
-            return (self.device.get_DC_voltage() < min_voltage)
+            return (self.device.get_DC_voltage(secondary = True) < min_voltage)
         # end if    
     # end def        
     
@@ -108,7 +102,7 @@ class Measurement_device:
             return self.device.read_SCPI("BM2:TEL? 10,data", "0x5C", "int")/1000.0
             
         else:
-            return self.device.get_DC_current(secondary = True)
+            return self.device.get_DC_current()
         # end if    
     # end def  
     
@@ -124,7 +118,7 @@ class Measurement_device:
             return self.device.read_SCPI("BM2:TEL? 9,data", "0x5C", "uint")/1000.0        
             
         else:
-            return self.device.get_DC_voltage()
+            return self.device.get_DC_voltage(secondary = True)
         # end if    
     # end def   
     
@@ -168,18 +162,6 @@ class Measurement_device:
         # end if
     # end def    
 # end class
-    
-
-def get_random_current():
-    return random.randint(slow_current*1000, fast_current*1000)/1000.0
-# end def
-
-if is_test:
-    print "Test Execution running"
-
-else:
-    print "Full Internal resistance logging initiated"
-# end if
 
 # init
 
@@ -187,11 +169,10 @@ PS = Power_Supply.PowerSupply('KA3005P')
 Load = DC_Load.DCLoad('M9711')
 Meas_Dev = Measurement_device()
 
-start_time = time.time()
-
+total_start_time = time.time()
 
 # charge the cell
-print "Charging"
+print "Starting Charging"
 with Meas_Dev:
     with PS:
         # set the charging voltage and current and turn on
@@ -200,27 +181,32 @@ with Meas_Dev:
         PS.output_on()
         
         Meas_Dev.get_current()
+        Meas_Dev.get_voltage()
         
         time.sleep(timestep)
         
         # wait for the taper current requirement to be met.
         while not Meas_Dev.get_is_fully_charged():
-            time.sleep(timestep)
             
             if is_test:
                 # if this is a test, stop charging after 1 min
-                if ((time.time() - start_time) > 60):
+                if ((time.time() - total_start_time) > 60):
                     break
                 # end if
+                
+                print ("time = " + str((time.time() - total_start_time) / 60) + "mins, voltage = "
+                       + str(Meas_Dev.get_voltage()) + "V, current = "
+                       + str(Meas_Dev.get_current()) + "A")
             # end if
+            
+            time.sleep(timestep)
         # end while
         
         PS.output_off()
     # end with
 
-
     # rest
-    print "Resting"
+    print "Resting after " + str((time.time() - total_start_time) / 60) + " mins"
     if not is_test:
         # only rest if this is not a test
         time.sleep(rest_duration)
@@ -248,7 +234,7 @@ with Meas_Dev:
         start_time = time.time()
         
         # discharge the cell and log
-        print "Discharging"
+        print "Discharging after " + str((time.time() - total_start_time) / 60) + " mins"
         with Load:
             
             # write initial row
@@ -265,17 +251,14 @@ with Meas_Dev:
             # end if
             
             # turn on the load
-            Load.set_mode('constant_current', slow_current)
+            Load.set_mode('constant_current', discharge_current)
             Load.load_on()
             
-            pulse_count = 0
-            
-            mode = 'slow'
+            # wait for the next time step
+            time.sleep(timestep)
             
             # wait for the cell to discahrge
             while not Meas_Dev.get_is_discharged():
-                # wait for the next time step
-                time.sleep(timestep)
                 
                 # write current data
                 if use_I2C:
@@ -291,33 +274,18 @@ with Meas_Dev:
                     output_writer.writerow([(time.time() - start_time) , Meas_Dev.get_voltage(), Meas_Dev.get_current()])
                 # end if
                 
-                # increment pulse counting
-                pulse_count += 1
-                    
-                # perform current pulsing
-                if (pulse_count >= pulse_loops):
-                    # it is time to change the current
-                    pulse_count = 0
-                    
-                    # change the current setting
-                    if do_random:
-                        Load.set_mode('constant_current', get_random_current())
-                        
-                    elif (mode == 'slow'):
-                        Load.set_mode('constant_current', fast_current)
-                        mode = 'fast'
-                    
-                    else:
-                        Load.set_mode('constant_current', slow_current)
-                        mode = 'slow'
-                    # end if
-                # end if
+                # wait for the next time step
+                time.sleep(timestep)                
                 
                 if is_test:
                     # only run for 5 mins if this is a test
                     if ((time.time() - start_time) > 5*60):
                         break
                     # end if
+                    
+                    print ("time = " + str((time.time() - start_time) / 60) + "mins, voltage = "
+                                       + str(Meas_Dev.get_voltage()) + "V, current = "
+                                       + str(Meas_Dev.get_current()) + "A")                    
                 # end if
             # end while
             
@@ -326,7 +294,7 @@ with Meas_Dev:
         # end with
         
         # rest
-        print "Resting"
+        print "Resting after " + str((time.time() - total_start_time) / 60) + " mins"
         
         restart_time = time.time()
         
@@ -357,14 +325,14 @@ with Meas_Dev:
         # end while
         
         # charge the cell and log
-        print "Charging"    
+        print "Charging after " + str((time.time() - total_start_time) / 60) + " mins"    
         
         # charge the cell and log
         with PS:
             
             # set the charging voltage and current and turn on
             PS.set_voltage(charge_voltage)
-            PS.set_current(slow_current)
+            PS.set_current(charge_current)
             PS.output_on()
             
             # write initial row
@@ -381,17 +349,14 @@ with Meas_Dev:
                 output_writer.writerow([(time.time() - start_time) , Meas_Dev.get_voltage(), Meas_Dev.get_current()])  
             # end if
             
-            pulse_count = 0
-            
             restart_time = time.time()
             
-            mode = 'slow'
+            time.sleep(timestep)
+            # write current data            
             
             # wait for the taper current requirement to be met.
             while not Meas_Dev.get_is_fully_charged():
-                time.sleep(timestep)
-                # write current data
-                
+
                 if use_I2C:
                     output_writer.writerow([(time.time() - start_time),
                                             Meas_Dev.get_voltage(), 
@@ -403,36 +368,21 @@ with Meas_Dev:
                                             Meas_Dev.get_absolute_SOC()])            
                 else:                
                     output_writer.writerow([(time.time() - start_time) , Meas_Dev.get_voltage(), Meas_Dev.get_current()])
-                # end if
-                
-                # increment pulse counting
-                pulse_count += 1
-                    
-                # perform current pulsing
-                if (pulse_count >= pulse_loops):
-                    # it is time to change the current
-                    pulse_count = 0
-                    
-                    # change the current setting
-                    if do_random:
-                        PS.set_current(get_random_current())
-                        
-                    elif (mode == 'slow'):
-                        PS.set_current(fast_current)
-                        mode = 'fast'
-                    
-                    else:
-                        PS.set_current(slow_current)
-                        mode = 'slow'
-                    # end if
-                # end if   
+                # end if  
                 
                 if is_test:
                     # only run for 5 mins if this is a test
                     if ((time.time() - restart_time) > 5*60):
                         break
                     # end if
-                # end if            
+                    
+                    print ("time = " + str((time.time() - start_time) / 60) + "mins, voltage = "
+                                       + str(Meas_Dev.get_voltage()) + "V, current = "
+                                       + str(Meas_Dev.get_current()) + "A")                    
+                # end if   
+                
+                time.sleep(timestep)
+                # write current data                
             # end while
             
             PS.output_off()
@@ -440,7 +390,7 @@ with Meas_Dev:
     # end with
 # end with
 
-print "Complete"
+print "Complete after " + str((time.time() - total_start_time) / 60) + " mins"
 
         
         

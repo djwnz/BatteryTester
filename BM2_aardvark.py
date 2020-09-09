@@ -135,7 +135,7 @@ class BM2:
     
     def open(self):
         """
-        If used in another 'with' capable mosule this provides __enter__ 
+        If used in another 'with' capable module this provides __enter__ 
         functionality
         """
         self.port = configure_aardvark()
